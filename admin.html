@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Certificate Upload</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        input, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        .hidden { display: none; }
+        #linkArea { margin-top: 15px; padding: 10px; background: #e9f5ff; border: 1px dashed #007bff; border-radius: 6px; word-break: break-all; text-align: left; }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+
+<div class="box" id="loginBox">
+    <h2>Admin Login</h2>
+    <input type="password" id="passInput" placeholder="Enter Password">
+    <button onclick="login()">Login</button>
+</div>
+
+<div class="box hidden" id="uploadBox">
+    <h2>Upload Card</h2>
+    <input type="text" id="cardId" placeholder="Enter Card ID (e.g., 55659)">
+    <input type="file" id="fileInput" accept="image/*">
+    <button id="uploadBtn" onclick="uploadFile()">Upload & Generate Link</button>
+    <div id="status" style="margin-top: 10px; font-weight: bold; color: #333;"></div>
+    <div id="linkArea" class="hidden"></div>
+</div>
+
+<script>
+    // আপনার স্ক্রিনশট থেকে নেওয়া অরিজিনাল ফায়ারবেস কনফিগ
+    const firebaseConfig = {
+        apiKey: "AIzaSyB8rIFihJP6fZLZsOFovqvX4bHKijqd7PE",
+        authDomain: "bureauveritas-cirtificate.firebaseapp.com",
+        projectId: "bureauveritas-cirtificate",
+        storageBucket: "bureauveritas-cirtificate.firebasestorage.app",
+        messagingSenderId: "1012726506608",
+        appId: "1:1012726506608:web:8bbb292f7acdba024b635"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    function login() {
+        const pass = document.getElementById('passInput').value;
+        if(pass === "12345") { 
+            document.getElementById('loginBox').classList.add('hidden');
+            document.getElementById('uploadBox').classList.remove('hidden');
+        } else {
+            alert("Wrong Password!");
+        }
+    }
+
+    async function uploadFile() {
+        const id = document.getElementById('cardId').value.trim();
+        const file = document.getElementById('fileInput').files[0];
+        const btn = document.getElementById('uploadBtn');
+        const status = document.getElementById('status');
+        const linkArea = document.getElementById('linkArea');
+
+        if(!id || !file) { alert("Please enter ID and select a file!"); return; }
+
+        btn.disabled = true;
+        status.innerText = "Uploading to Google Firebase...";
+
+        try {
+            // ১. গুগল ক্লাউড স্টোরেজে ইমেজ আপলোড
+            const storageRef = storage.ref('certificates/' + id + '_' + file.name);
+            const snapshot = await storageRef.put(file);
+            const downloadURL = await snapshot.ref.getDownloadURL();
+
+            // ২. ডাটাবেজে ইমেজ ইউআরএল সেভ
+            await db.collection('cards').doc(id).set({ imageUrl: downloadURL });
+
+            status.innerText = "Upload Success!";
+            
+            // ৩. মেইন সাইটের ইউনিক লিংক জেনারেট
+            const liveLink = window.location.origin + window.location.pathname.replace('admin.html', '') + "?id=" + id;
+            linkArea.classList.remove('hidden');
+            linkArea.innerHTML = `<strong>Your Live Link:</strong><br><a href="${liveLink}" target="_blank">${liveLink}</a>`;
+        } catch (error) {
+            console.error(error);
+            status.innerText = "Upload Failed! Ensure Database & Storage are in Test Mode.";
+        }
+        btn.disabled = false;
+    }
+</script>
+</body>
+</html>
+

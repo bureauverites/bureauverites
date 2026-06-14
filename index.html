@@ -2,100 +2,53 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Certificate Verification</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Verification Portal</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            width: 100%;
-            min-height: 100vh;
-            background-color: #f0f2f5;
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .certificate-box {
-            flex-grow: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            padding: 0;
-            overflow: auto;           /* স্ক্রলিং সক্রিয় */
-        }
-
-        .certificate-box img {
-            width: 100%;
-            height: auto;
-            max-width: 100%;
-            display: none;
-            margin: 0 auto;
-        }
-
-        .footer {
-            padding: 12px 0;
-            text-align: center;
-            width: 100%;
-            background-color: transparent;
-            flex-shrink: 0;           /* ফুটার নিচে আটকে থাকবে */
-        }
-
-        .footer a {
-            text-decoration: none;
-            color: #000;
-            font-size: 10px;
-            font-weight: normal;
-        }
-
-        #error-msg {
-            padding: 20px;
-            text-align: center;
-            display: none;
-        }
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; overflow: hidden; overscroll-behavior: none; touch-action: pinch-zoom; }
+        .container { width: 100%; max-width: 450px; padding: 15px; box-sizing: border-box; display: flex; justify-content: center; align-items: center; text-align: center;}
+        img { width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); -webkit-user-drag: none; user-select: none; display: none; }
+        .msg { font-family: Arial, sans-serif; color: #666; font-size: 16px; }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
-    <div class="certificate-box">
-        <img id="certImage" src="" alt="Certificate">
-        <div id="error-msg">
-            <h2 style="font-size: 16px;">Certificate Not Found</h2>
-            <p style="font-size: 12px;">Please check the URL or ID again.</p>
-        </div>
+    <div class="container">
+        <div id="loader" class="msg">Checking Verification...</div>
+        <img id="cardImage" alt="Card Verification">
     </div>
 
-    <div class="footer">
-        <a href="https://group.bureauveritas.com/" target="_blank">Visit Bureau Veritas website</a>
-    </div>
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyB8rIFihJP6fZLZsOFovqvX4bHKijqd7PE",
+        authDomain: "bureauveritas-cirtificate.firebaseapp.com",
+        projectId: "bureauveritas-cirtificate"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
-    <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const certId = urlParams.get('id');
-        const imgElement = document.getElementById('certImage');
-        const errorElement = document.getElementById('error-msg');
+    // URL থেকে আইডি রিড করা (?id=55659)
+    const urlParams = new URLSearchParams(window.location.search);
+    const cardId = urlParams.get('id');
 
-        if (certId) {
-            imgElement.src = certId + ".png"; 
-            
-            imgElement.onload = function() {
-                imgElement.style.display = "block";
-                errorElement.style.display = "none";
-            };
-
-            imgElement.onerror = function() {
-                imgElement.style.display = "none";
-                errorElement.style.display = "block";
-            };
-        } else {
-            errorElement.style.display = "block";
-        }
-    </script>
-
+    if (cardId) {
+        db.collection('cards').doc(cardId).get().then((doc) => {
+            if (doc.exists) {
+                document.getElementById('loader').style.display = 'none';
+                const imgTag = document.getElementById('cardImage');
+                imgTag.src = doc.data().imageUrl;
+                imgTag.style.display = 'block';
+            } else {
+                document.getElementById('loader').innerText = "Invalid ID! Certificate Not Found.";
+            }
+        }).catch((error) => {
+            document.getElementById('loader').innerText = "Error loading verification data.";
+        });
+    } else {
+        document.getElementById('loader').innerText = "No ID Provided. Append ?id=YOUR_ID to URL";
+    }
+</script>
 </body>
 </html>

@@ -15,7 +15,6 @@
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 </head>
 <body>
 
@@ -26,28 +25,25 @@
 </div>
 
 <div class="box hidden" id="uploadBox">
-    <h2>Upload Card</h2>
+    <h2>Upload Card (Free Link)</h2>
     <input type="text" id="cardId" placeholder="Enter Card ID (e.g., 55659)">
-    <input type="file" id="fileInput" accept="image/*">
-    <button id="uploadBtn" onclick="uploadFile()">Upload & Generate Link</button>
+    <p style="font-size: 12px; color: #666; text-align: left; margin: 5px 0;">১. প্রথমে গিটহাবে আপনার ছবিটি আপলোড করুন।<br>২. সেই ছবির ডিরেক্ট লিংকটি নিচের বক্সে বসিয়ে দিন:</p>
+    <input type="text" id="imgUrlInput" placeholder="Paste Image Direct Link">
+    <button id="uploadBtn" onclick="saveData()">Connect & Generate Link</button>
     <div id="status" style="margin-top: 10px; font-weight: bold; color: #333;"></div>
     <div id="linkArea" class="hidden"></div>
 </div>
 
 <script>
-    // আপনার স্ক্রিনশট থেকে নেওয়া অরিজিনাল ফায়ারবেস কনফিগ
+    // আপনার অরিজিনাল ফায়ারবেস কনফিগ (ডাটাবেজ ফ্রি)
     const firebaseConfig = {
         apiKey: "AIzaSyB8rIFihJP6fZLZsOFovqvX4bHKijqd7PE",
         authDomain: "bureauveritas-cirtificate.firebaseapp.com",
-        projectId: "bureauveritas-cirtificate",
-        storageBucket: "bureauveritas-cirtificate.firebasestorage.app",
-        messagingSenderId: "1012726506608",
-        appId: "1:1012726506608:web:8bbb292f7acdba024b635"
+        projectId: "bureauveritas-cirtificate"
     };
     
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    const storage = firebase.storage();
 
     function login() {
         const pass = document.getElementById('passInput').value;
@@ -59,40 +55,32 @@
         }
     }
 
-    async function uploadFile() {
+    async function saveData() {
         const id = document.getElementById('cardId').value.trim();
-        const file = document.getElementById('fileInput').files[0];
+        const imageUrl = document.getElementById('imgUrlInput').value.trim();
         const btn = document.getElementById('uploadBtn');
         const status = document.getElementById('status');
         const linkArea = document.getElementById('linkArea');
 
-        if(!id || !file) { alert("Please enter ID and select a file!"); return; }
+        if(!id || !imageUrl) { alert("Please enter ID and Image URL!"); return; }
 
         btn.disabled = true;
-        status.innerText = "Uploading to Google Firebase...";
+        status.innerText = "Connecting with Google Firebase...";
 
         try {
-            // ১. গুগল ক্লাউড স্টোরেজে ইমেজ আপলোড
-            const storageRef = storage.ref('certificates/' + id + '_' + file.name);
-            const snapshot = await storageRef.put(file);
-            const downloadURL = await snapshot.ref.getDownloadURL();
+            // ডাটাবেজে লিংক সেভ হচ্ছে
+            await db.collection('cards').doc(id).set({ imageUrl: imageUrl });
 
-            // ২. ডাটাবেজে ইমেজ ইউআরএল সেভ
-            await db.collection('cards').doc(id).set({ imageUrl: downloadURL });
-
-            status.innerText = "Upload Success!";
-            
-            // ৩. মেইন সাইটের ইউনিক লিংক জেনারেট
+            status.innerText = "Success!";
             const liveLink = window.location.origin + window.location.pathname.replace('admin.html', '') + "?id=" + id;
             linkArea.classList.remove('hidden');
             linkArea.innerHTML = `<strong>Your Live Link:</strong><br><a href="${liveLink}" target="_blank">${liveLink}</a>`;
         } catch (error) {
             console.error(error);
-            status.innerText = "Upload Failed! Ensure Database & Storage are in Test Mode.";
+            status.innerText = "Failed! Make sure Firestore is created in Test Mode.";
         }
         btn.disabled = false;
     }
 </script>
 </body>
 </html>
-
